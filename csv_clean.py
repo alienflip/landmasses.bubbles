@@ -4,31 +4,17 @@ import csv
 
 # read_csv function which is used to read the required CSV file
 # source: https://www.cia.gov/the-world-factbook/field/area/country-comparison/
-data = pd.read_csv('landmass.csv')
+df = pd.read_csv('Area.csv', thousands=',')
 
 # drop function which is used in removing or deleting rows or columns from the CSV files
-data.drop('slug', inplace=True, axis=1)
-data.drop('region', inplace=True, axis=1)
-data.drop('ranking', inplace=True, axis=1)
-data.drop('date_of_information', inplace=True, axis=1)
+df.drop('slug', inplace=True, axis=1)
+df.drop('ranking', inplace=True, axis=1)
+df.drop('date_of_information', inplace=True, axis=1)
 
-col_0 = data["name"]
-col_1 = ["Origin" for i in range(col_0.shape[0])]
-col_2 = data[" sq km"]
+new_df = pd.DataFrame()
+new_df["region"] = df["region"].astype(str)
+new_df["subregion"] = ["Mother Earth" for i in range(df["region"].shape[0])]
+new_df["key"] = df["name"].astype(str)
+new_df["value"] = df[" sq km"].astype(int)
 
-new_df = pd.DataFrame(col_0)
-new_df["parent"] = col_1
-new_df["value"] = col_2
-
-new_df.loc[0] = "Origin", "", ""
-new_df = new_df.sort_index().reset_index(drop=True)
-
-new_df.to_csv('landmass_cleaned_0.csv')
-
-# save cleaning step 1
-with open('landmass_cleaned_0.csv', newline='\n') as csvfile:
-    spamreader = csv.reader(csvfile)
-    with open("landmass_cleaned_1.csv", "w") as file:
-        writer = csv.writer(file, delimiter=',', quotechar='"')
-        for row in spamreader:
-            writer.writerow([row[1], row[2], row[3].replace(",",'')])
+new_df.to_csv('landmasses_cleaned.csv', index=False, sep=";", quotechar='"', quoting=csv.QUOTE_NONNUMERIC)

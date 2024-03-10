@@ -1,68 +1,152 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
-
-<!-- Load d3.js -->
 <script src="https://d3js.org/d3.v4.js"></script>
-
-<!-- Create a div where the graph will take place -->
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
 <div id="landmasses"></div>
-<script>
 
-    // set the dimensions and margins of the graph
-    var margin = {top: 10, right: 10, bottom: 10, left: 10},
-      width = 445 - margin.left - margin.right,
-      height = 445 - margin.top - margin.bottom;
-    
-    // append the svg object to the body of the page
-    var svg = d3.select("#landmasses")
+<style>
+.node:hover{
+  stroke-width: 7px !important;
+  opacity: 1 !important;
+}
+</style>
+
+<script>
+  // set the dimensions and margins of the graph
+  var width = window.screen.availWidth * 2.5
+  var height = window.screen.availHeight * 1.75
+
+  let humanRead = (num, intSep = ',', floatSep = '.') => {
+    return new Intl
+      .NumberFormat('en-US')
+      .format(num)
+      .replaceAll('.',floatSep)
+      .replaceAll(',',intSep);
+  }
+  
+  // append the svg object to the body of the page
+  var svg = d3.select("#landmasses")
     .append("svg")
-      .attr("width", width + margin.left + margin.right)
-      .attr("height", height + margin.top + margin.bottom)
-    .append("g")
-      .attr("transform",
-            "translate(" + margin.left + "," + margin.top + ")");
-    
-    // Read data
-    d3.csv('https://raw.githubusercontent.com/alienflip/landmasses.treemap/main/landmass_cleaned_1.csv', function(data) {
-    
-      // stratify the data: reformatting for d3.js
-      var root = d3.stratify()
-        .id(function(d) { return d.name; })   // Name of the entity (column name is name in csv)
-        .parentId(function(d) { return d.parent; })   // Name of the parent (column name is parent in csv)
-        (data);
-      root.sum(function(d) { return +d.value })   // Compute the numeric value for each entity
-    
-      // Then d3.treemap computes the position of each element of the hierarchy
-      // The coordinates are added to the root object above
-      d3.treemap()
-        .size([width, height])
-        .padding(4)
-        (root)
-    
-    console.log(root.leaves())
-      // use this information to add rectangles:
-      svg
-        .selectAll("rect")
-        .data(root.leaves())
-        .enter()
-        .append("rect")
-          .attr('x', function (d) { return d.x0; })
-          .attr('y', function (d) { return d.y0; })
-          .attr('width', function (d) { return d.x1 - d.x0; })
-          .attr('height', function (d) { return d.y1 - d.y0; })
-          .style("stroke", "black")
-          .style("fill", "#69b3a2");
-    
-      // and to add the text labels
-      svg
-        .selectAll("text")
-        .data(root.leaves())
-        .enter()
-        .append("text")
-          .attr("x", function(d){ return d.x0+10})    // +10 to adjust position (more right)
-          .attr("y", function(d){ return d.y0+20})    // +20 to adjust position (lower)
-          .text(function(d){ return d.data.name})
-          .attr("font-size", "15px")
-          .attr("fill", "white")
-    })
-  </script>
+    .attr("width", width)
+    .attr("height", height)
+  
+  // Read data
+  d3.csv("https://raw.githubusercontent.com/alienflip/landmasses.bubbles/main/landmasses_cleaned.csv", function(data) {
+  
+    // Color palette for continents?
+    var color = d3.scaleOrdinal()
+      .domain([
+        "Central Asia",
+        "Africa",
+        "Antarctica", 
+        "North America", 
+        "East and Southeast Asia", 
+        "South America",
+        "Australia and Oceania",
+        "Middle East",
+        "South Asia",
+        "Central America and the Caribbean"
+      ])
+      .range([
+        "#FF0800", 
+        "#FF0080",
+        "#FFEF00",
+        "#80FF00",
+        "#273BE2",
+        "#8F00FF",
+        "#FC0FC0",
+        "#87CEEB",
+        "#E9FFDB",
+        "#414A4C"
+      ]);
+  
+    // Size scale for countries
+    var size = d3.scaleLinear()
+      .domain([0, 7000000])
+      .range([2, 55])  // circle will be between 7 and 55 px wide
+  
+    // create a tooltip
+    var Tooltip = d3.select("#landmasses")
+      .append("div")
+      .style("opacity", 0)
+      .attr("class", "tooltip")
+      .style("background-color", "white")
+      .style("border", "solid")
+      .style("border-width", "2px")
+      .style("border-radius", "5px")
+      .style("padding", "5px")
+  
+    // Three function that change the tooltip when user hover / move / leave a cell
+    var mouseover = function(d) {
+      Tooltip
+        .style("opacity", 1)
+    }
+
+    var mousemove = function(d) {
+      Tooltip
+        .html('<u>' + d.key + " (" + d.region + ")" + '</u>' + "<br>" + 'Land area of: ' + humanRead(d.value) + " km squared")
+        .style("left", (d3.mouse(this)[0]+20) + "px")
+        .style("top", (d3.mouse(this)[1]) + "px")
+    }
+    var mouseleave = function(d) {
+      Tooltip
+        .style("opacity", 0)
+    }
+  
+    // Initialize the circle: all located at the center of the svg area
+    var node = svg.append("g")
+      .selectAll("circle")
+      .data(data)
+      .enter()
+      .append("circle")
+      .attr("class", "node")
+      .attr("r", function(d){return size(d.value)})
+      .attr("cx", width / 2)
+      .attr("cy", height / 2)
+      .style("fill", function(d){ return color(d.region)})
+      .style("fill-opacity", 0.8)
+      .attr("stroke", "black")
+      .style("stroke-width", 1)
+      .on("mouseover", mouseover) // What to do when hovered
+      .on("mousemove", mousemove)
+      .on("mouseleave", mouseleave)
+      .call(d3.drag() // call specific function when circle is dragged
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended));
+  
+    // Features of the forces applied to the nodes:
+    var simulation = d3.forceSimulation()
+      .force("center", d3.forceCenter().x(width / 2).y(height / 2)) // Attraction to the center of the svg area
+      .force("charge", d3.forceManyBody().strength(2.5)) // Nodes are attracted one each other of value is > 0
+      .force("collide", d3.forceCollide().strength(.2).radius(function(d){ return (size(d.value)+3) }).iterations(1)) // Force that avoids circle overlapping
+  
+    // Apply these forces to the nodes and update their positions.
+    // Once the force algorithm is happy with positions ('alpha' value is low enough), simulations will stop.
+    simulation
+      .nodes(data)
+      .on("tick", function(d){
+        node
+          .attr("cx", function(d){ return d.x; })
+          .attr("cy", function(d){ return d.y; })
+      });
+  
+    // What happens when a circle is dragged?
+    function dragstarted(d) {
+      if (!d3.event.active) simulation.alphaTarget(.03).restart();
+      d.fx = d.x;
+      d.fy = d.y;
+    }
+
+    function dragged(d) {
+      d.fx = d3.event.x;
+      d.fy = d3.event.y;
+    }
+
+    function dragended(d) {
+      if (!d3.event.active) simulation.alphaTarget(.03);
+      d.fx = null;
+      d.fy = null;
+    }
+  })
+</script>

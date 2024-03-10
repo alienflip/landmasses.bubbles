@@ -23,7 +23,7 @@
             "translate(" + margin.left + "," + margin.top + ")");
     
     // Read data
-    d3.csv('landmass_cleaned_1.csv', function(data) {
+    d3.csv('https://raw.githubusercontent.com/alienflip/landmasses.treemap/main/landmass_cleaned_1.csv', function(data) {
     
       // stratify the data: reformatting for d3.js
       var root = d3.stratify()
@@ -65,4 +65,4 @@
           .attr("font-size", "15px")
           .attr("fill", "white")
     })
-    </script>
+  </script>
